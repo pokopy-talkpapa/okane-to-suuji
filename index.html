@@ -167,6 +167,17 @@
     100%{ opacity:0; transform:translate(var(--dx),var(--dy)) scale(0.4); }
   }
 
+  @keyframes shake {
+    0%,100% { transform:translateX(0); }
+    15%     { transform:translateX(-8px); }
+    30%     { transform:translateX(8px); }
+    45%     { transform:translateX(-6px); }
+    60%     { transform:translateX(6px); }
+    75%     { transform:translateX(-3px); }
+    90%     { transform:translateX(3px); }
+  }
+  .shaking { animation:shake .45s ease; }
+
   /* 数直線 */
   .numberLine { margin-top:12px; }
   .nlTrack {
@@ -721,6 +732,14 @@
     resultEl.textContent = '× もういちど';
     resultEl.className = 'result ng';
     playWrong();
+    const panel = resultEl.closest('.panel');
+    if (panel) {
+      panel.classList.remove('shaking');
+      requestAnimationFrame(() => {
+        panel.classList.add('shaking');
+        panel.addEventListener('animationend', () => panel.classList.remove('shaking'), { once: true });
+      });
+    }
   }
 
   function handleDone(mode) {
