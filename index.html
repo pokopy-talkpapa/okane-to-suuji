@@ -574,6 +574,11 @@
       Array.from(document.querySelectorAll(`#${id} .coinImg`))
     );
 
+    // コイン全着地までの時間を計算して nextProblem タイミングを決める
+    const allCoinsMs = coinImages.length > 0
+      ? (coinImages.length - 1) * 28 + 400 + 200
+      : 0;
+
     function growBar() {
       requestAnimationFrame(() => requestAnimationFrame(() => {
         barEl.style.transition = 'width 0.5s ease-out';
@@ -585,7 +590,7 @@
         barEl.style.transition = 'none';
         barEl.style.width = '0%';
         nextProblem();
-      }, 800);
+      }, Math.max(800, allCoinsMs));
     }
 
     if (coinImages.length === 0) {
@@ -593,8 +598,9 @@
       return;
     }
 
-    // コインのクローンを飛ばしてからバーを伸ばす
-    let arrived = 0;
+    // コインと同時にバーを伸ばし始める
+    growBar();
+
     coinImages.forEach((img, i) => {
       const rect = img.getBoundingClientRect();
       const clone = document.createElement('img');
@@ -619,11 +625,7 @@
         clone.style.opacity   = '0';
       }, i * 28);
 
-      setTimeout(() => {
-        clone.remove();
-        arrived++;
-        if (arrived === coinImages.length) growBar();
-      }, i * 28 + 400);
+      setTimeout(() => { clone.remove(); }, i * 28 + 400);
     });
   }
 
