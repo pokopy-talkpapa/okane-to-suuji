@@ -106,7 +106,7 @@
 
   /* コインエリア */
   .coinArea { height:190px; display:flex; justify-content:center; align-items:flex-end; padding:4px 0; overflow:visible; }
-  .coinGroup { display:flex; gap:4px; justify-content:center; align-items:flex-end; }
+  .coinGroup { display:flex; gap:4px; align-items:flex-end; width:80px; }
   .coinCol { display:flex; flex-direction:column-reverse; align-items:center; gap:2px; width:38px; flex-shrink:0; }
   .coinImg { width:34px; height:34px; object-fit:contain; user-select:none; pointer-events:none; flex-shrink:0; }
   .emptyCoins { color:#bbb; font-size:.85rem; border:2px dashed #ccc; border-radius:10px; padding:5px 8px; }
@@ -416,7 +416,7 @@
     }
     const group = document.createElement('div');
     group.className = 'coinGroup';
-    (count <= 5 ? [count] : [5, count - 5]).forEach(n => {
+    [Math.min(count, 5), Math.max(0, count - 5)].forEach(n => {
       const col = document.createElement('div');
       col.className = 'coinCol';
       for (let i = 0; i < n; i++) {
