@@ -94,7 +94,7 @@
   }
 
   /* コインエリア */
-  .coinArea { height:200px; display:flex; justify-content:center; align-items:flex-end; padding:4px 0; overflow:visible; }
+  .coinArea { height:200px; display:flex; justify-content:center; align-items:flex-end; padding:4px 0; overflow:hidden; }
   .coinGroup { display:flex; gap:4px; align-items:flex-end; width:84px; }
   .coinCol { display:flex; flex-direction:column-reverse; align-items:center; gap:2px; width:40px; flex-shrink:0; }
   .coinImg { width:40px; height:40px; object-fit:contain; user-select:none; flex-shrink:0; }
@@ -524,9 +524,17 @@
       el.innerHTML = '<span class="emptyCoins">０まい</span>';
       return;
     }
+    // coinArea(200px) - padding(4px*2) = 192px に収まるようサイズを動的計算
+    const AREA_H = 192;
+    const COL_GAP = 2;
+    const colLen = Math.min(count, 5);
+    const maxSize = Math.floor((AREA_H - (colLen - 1) * COL_GAP) / colLen);
+    const coinSize = Math.min(40, Math.max(22, maxSize));
+
     const group = document.createElement('div');
     group.className = 'coinGroup';
     [Math.min(count, 5), Math.max(0, count - 5)].forEach(n => {
+      if (n === 0) return;
       const col = document.createElement('div');
       col.className = 'coinCol';
       for (let i = 0; i < n; i++) {
@@ -534,6 +542,8 @@
         img.className = 'coinImg';
         img.src = coinSrc;
         img.alt = '';
+        img.style.width = coinSize + 'px';
+        img.style.height = coinSize + 'px';
         if (onRemove) {
           img.classList.add('removable');
           img.addEventListener('click', onRemove);
