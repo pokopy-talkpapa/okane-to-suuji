@@ -351,20 +351,9 @@
   let soundOn = localStorage.getItem('okaneToSuujiSoundOn') !== 'off';
   let audioCtx = null;
 
-  // MP3の生データをページ読み込み直後からフェッチ（AudioContext不要）
-  const COIN_RATES = [0.82, 0.88, 0.94, 1.0, 1.06, 1.12, 1.18];
-  const TAP_URLS = ['sounds/coin.mp3', 'sounds/coin2.mp3', 'sounds/coin3.mp3'];
-  let _tapBufs = [];
+  // coins-success.mp3 だけページ読み込み直後からフェッチ（AudioContext不要）
   let _successBuf = null;
-  const _pendingTapABs = [];
   let _pendingSuccessAB = null;
-
-  TAP_URLS.forEach(url =>
-    fetch(url).then(r => r.arrayBuffer()).then(ab => {
-      if (audioCtx) audioCtx.decodeAudioData(ab).then(buf => _tapBufs.push(buf)).catch(()=>{});
-      else _pendingTapABs.push(ab);
-    }).catch(()=>{})
-  );
   fetch('sounds/coins-success.mp3').then(r => r.arrayBuffer()).then(ab => {
     if (audioCtx) audioCtx.decodeAudioData(ab).then(buf => { _successBuf = buf; }).catch(()=>{});
     else _pendingSuccessAB = ab;
@@ -375,10 +364,6 @@
     if (!Cls) return null;
     if (!audioCtx) {
       audioCtx = new Cls();
-      // AudioContext作成と同時に待機中の生データをデコード（ほぼ即完了）
-      _pendingTapABs.splice(0).forEach(ab =>
-        audioCtx.decodeAudioData(ab).then(buf => _tapBufs.push(buf)).catch(()=>{})
-      );
       if (_pendingSuccessAB) {
         audioCtx.decodeAudioData(_pendingSuccessAB).then(buf => { _successBuf = buf; }).catch(()=>{});
         _pendingSuccessAB = null;
@@ -402,71 +387,64 @@
     osc.start(now); osc.stop(now + dur + 0.02);
   }
 
-  // MP3未ロード時のフォールバック：メタリックなコインチック音
-  function _playCoinFallback(ctx) {
+  // 両モード共通：切れ味のあるコインチック音（Web Audio合成・即再生）
+  function playCoinTick() {
+    if (!soundOn) return;
+    const ctx = getCtx(); if (!ctx) return;
     const now = ctx.currentTime;
-    [[1800, 0.05], [2800, 0.035], [4200, 0.02]].forEach(([f, g], i) => {
+    [[2000, 0.058], [3300, 0.038], [5200, 0.022]].forEach(([f, g], i) => {
       const osc = ctx.createOscillator();
       const amp = ctx.createGain();
       osc.type = 'sine';
       osc.frequency.setValueAtTime(f, now + i*0.001);
-      osc.frequency.exponentialRampToValueAtTime(f * 0.45, now + 0.14);
+      osc.frequency.exponentialRampToValueAtTime(f * 0.42, now + 0.11);
       amp.gain.setValueAtTime(g, now + i*0.001);
-      amp.gain.exponentialRampToValueAtTime(0.0001, now + 0.17);
+      amp.gain.exponentialRampToValueAtTime(0.0001, now + 0.13 - i*0.008);
       osc.connect(amp); amp.connect(ctx.destination);
-      osc.start(now + i*0.001); osc.stop(now + 0.2);
+      osc.start(now + i*0.001); osc.stop(now + 0.17);
     });
   }
 
-  // mode1コイン音：MP3ランダム再生、未ロード時はメタリック合成音
-  function playTap() {
-    if (!soundOn) return;
-    const ctx = getCtx(); if (!ctx) return;
-    if (_tapBufs.length > 0) {
-      const buf = _tapBufs[Math.floor(Math.random() * _tapBufs.length)];
-      const src = ctx.createBufferSource();
-      src.buffer = buf;
-      src.playbackRate.value = COIN_RATES[Math.floor(Math.random() * COIN_RATES.length)];
-      const gain = ctx.createGain();
-      gain.gain.value = 0.75;
-      src.connect(gain); gain.connect(ctx.destination);
-      const t = ctx.currentTime;
-      src.start(t, 0);
-      src.stop(t + 0.5);
-    } else {
-      _playCoinFallback(ctx);
+  // ジャラジャラ合成音（coins-success.mp3 未ロード時のフォールバック）
+  function _playJaraJara(ctx) {
+    const N = 16;
+    for (let i = 0; i < N; i++) {
+      const ms = i * 60 + (Math.random() * 22 | 0);
+      setTimeout(() => {
+        if (!soundOn) return;
+        const t = ctx.currentTime;
+        const f = 1200 + (Math.random() * 3200 | 0);
+        const g = 0.03 + Math.random() * 0.04;
+        const o = ctx.createOscillator();
+        const a = ctx.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(f, t);
+        o.frequency.exponentialRampToValueAtTime(f * 0.28, t + 0.1);
+        a.gain.setValueAtTime(g, t);
+        a.gain.exponentialRampToValueAtTime(0.0001, t + 0.13);
+        o.connect(a); a.connect(ctx.destination);
+        o.start(t); o.stop(t + 0.16);
+      }, ms);
     }
   }
 
-  // mode2スピナー音：小気味よい電子クリック
-  function playSpinTick() {
+  // 吸い込み時の音：MP3優先、未ロードなら合成ジャラジャラで確実に鳴らす
+  function playSuccess() {
     if (!soundOn) return;
     const ctx = getCtx(); if (!ctx) return;
-    const now = ctx.currentTime;
-    const osc = ctx.createOscillator();
-    const amp = ctx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(1800, now);
-    osc.frequency.exponentialRampToValueAtTime(900, now + 0.045);
-    amp.gain.setValueAtTime(0.0001, now);
-    amp.gain.exponentialRampToValueAtTime(0.07, now + 0.004);
-    amp.gain.exponentialRampToValueAtTime(0.0001, now + 0.07);
-    osc.connect(amp); amp.connect(ctx.destination);
-    osc.start(now); osc.stop(now + 0.08);
-  }
-
-  function playSuccess() {
-    if (!soundOn || !_successBuf) return;
-    const ctx = getCtx(); if (!ctx) return;
-    const src = ctx.createBufferSource();
-    src.buffer = _successBuf;
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.75, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.4);
-    src.connect(gain); gain.connect(ctx.destination);
-    const t = ctx.currentTime;
-    src.start(t, 0);
-    src.stop(t + 1.5);
+    if (_successBuf) {
+      const src = ctx.createBufferSource();
+      src.buffer = _successBuf;
+      const gain = ctx.createGain();
+      const t = ctx.currentTime;
+      gain.gain.setValueAtTime(0.75, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 1.4);
+      src.connect(gain); gain.connect(ctx.destination);
+      src.start(t, 0);
+      src.stop(t + 1.5);
+    } else {
+      _playJaraJara(ctx);
+    }
   }
   function playVictory() {
     beep({ freq:880,  dur:0.08, gain:0.035, when:0    });
@@ -575,7 +553,7 @@
       const next = userCoins[place] + delta;
       if (next < 0 || next > 9) return;
       userCoins[place] = next;
-      if (delta > 0) playTap();
+      if (delta > 0) playCoinTick();
       renderMode1();
       updateLiveBar('mode1');
     });
@@ -596,7 +574,7 @@
       const place = btn.dataset.place;
       const delta = parseInt(btn.dataset.delta, 10);
       userDigits[place] = (userDigits[place] + delta + 10) % 10;
-      playSpinTick();
+      playCoinTick();
       document.getElementById(`m2Digit${place.toUpperCase()}`).textContent = userDigits[place];
       updateLiveBar('mode2');
     });
@@ -690,22 +668,13 @@
 
     const prefix = currentMode === 'mode1' ? 'm1' : 'm2';
 
-    if (currentMode === 'mode1') {
-      // 少し間を置いてコイン吸い込み開始＋成功音
-      setTimeout(() => {
-        playSuccess();
-        animateCoinAbsorption(prefix, () => {
-          setTimeout(nextProblem, 400);
-        });
-      }, 280);
-    } else {
-      // mode2: バー青に変えて次へ
-      ['H','T','O'].forEach(p => {
-        document.getElementById(prefix + 'NlBar' + p).style.background = '#4a9eff';
-      });
+    // 両モード共通：少し間を置いてコイン吸い込み＋成功音
+    setTimeout(() => {
       playSuccess();
-      setTimeout(nextProblem, 1500);
-    }
+      animateCoinAbsorption(prefix, () => {
+        setTimeout(nextProblem, 400);
+      });
+    }, 280);
   }
 
   function onWrong(resultEl) {
@@ -776,6 +745,10 @@
       resetBar('m1');
       renderMode1();
     } else {
+      ['H','T','O'].forEach(p => {
+        const a = document.getElementById('m2Coins' + p);
+        if (a) a.style.visibility = '';
+      });
       userDigits = { h: 0, t: 0, o: 0 };
       document.getElementById('m2Result').textContent = '';
       document.getElementById('m2Result').className = 'result';
