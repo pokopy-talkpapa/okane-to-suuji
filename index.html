@@ -243,7 +243,47 @@
     <!-- ゲーム画面（Task 3・4 で中身を追加） -->
     <div class="gameScreen" id="gameScreen">
       <button class="backBtn" id="backBtn" type="button">← もどる</button>
-      <!-- mode1 / mode2 の中身は Task 3・4 で挿入 -->
+      <!-- mode1: すうじ→おかね -->
+      <div id="mode1Screen" style="display:none">
+        <div class="problemNum" id="m1ProblemNum">438</div>
+        <table class="place">
+          <thead>
+            <tr>
+              <th class="h">百のくらい</th>
+              <th class="t">十のくらい</th>
+              <th class="o">一のくらい</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="h"><button class="coinCtrlBtn" data-place="h" data-delta="1">＋</button></td>
+              <td class="t"><button class="coinCtrlBtn" data-place="t" data-delta="1">＋</button></td>
+              <td class="o"><button class="coinCtrlBtn" data-place="o" data-delta="1">＋</button></td>
+            </tr>
+            <tr>
+              <td class="h"><div class="coinArea" id="m1CoinsH"></div></td>
+              <td class="t"><div class="coinArea" id="m1CoinsT"></div></td>
+              <td class="o"><div class="coinArea" id="m1CoinsO"></div></td>
+            </tr>
+            <tr>
+              <td class="h"><button class="coinCtrlBtn" data-place="h" data-delta="-1">−</button></td>
+              <td class="t"><button class="coinCtrlBtn" data-place="t" data-delta="-1">−</button></td>
+              <td class="o"><button class="coinCtrlBtn" data-place="o" data-delta="-1">−</button></td>
+            </tr>
+          </tbody>
+        </table>
+        <button class="doneBtn" id="m1DoneBtn" type="button">できた！</button>
+        <div class="resultArea"><div class="result" id="m1Result"></div></div>
+        <div class="numberLine" id="m1NumberLine">
+          <div class="nlTrack"><div class="nlBar" id="m1NlBar"></div></div>
+          <div class="nlLabels"><span>0</span><span>500</span><span>1000</span></div>
+          <div class="nlValue" id="m1NlValue"></div>
+        </div>
+      </div>
+
+      <!-- mode2: おかね→すうじ（Task 4 で追加） -->
+      <div id="mode2Screen" style="display:none">
+      </div>
     </div>
 
   </div>
@@ -310,11 +350,77 @@
   document.getElementById('startMode1').addEventListener('click', () => startGame('mode1'));
   document.getElementById('startMode2').addEventListener('click', () => startGame('mode2'));
 
+  // ===== 共通状態 =====
+  let currentMode = null;
+  let targetNum   = 0;
+  let userCoins   = { h: 0, t: 0, o: 0 };
+  let userDigits  = { h: 0, t: 0, o: 0 };
+
+  const COIN_SRC = {
+    h: 'imgs/money_100.png',
+    t: 'imgs/money_10.png',
+    o: 'imgs/money_1.png',
+  };
+
+  function renderCoinArea(el, coinSrc, count) {
+    el.innerHTML = '';
+    if (count === 0) {
+      el.innerHTML = '<span class="emptyCoins">０まい</span>';
+      return;
+    }
+    const group = document.createElement('div');
+    group.className = 'coinGroup';
+    (count <= 5 ? [count] : [5, count - 5]).forEach(n => {
+      const col = document.createElement('div');
+      col.className = 'coinCol';
+      for (let i = 0; i < n; i++) {
+        const img = document.createElement('img');
+        img.className = 'coinImg'; img.src = coinSrc; img.alt = '';
+        col.appendChild(img);
+      }
+      group.appendChild(col);
+    });
+    el.appendChild(group);
+  }
+
+  function renderMode1() {
+    renderCoinArea(document.getElementById('m1CoinsH'), COIN_SRC.h, userCoins.h);
+    renderCoinArea(document.getElementById('m1CoinsT'), COIN_SRC.t, userCoins.t);
+    renderCoinArea(document.getElementById('m1CoinsO'), COIN_SRC.o, userCoins.o);
+  }
+
   function startGame(mode) {
     showGame();
-    // Task 3・4 で実装
-    console.log('startGame:', mode);
+    currentMode = mode;
+    targetNum = generateProblem();
+
+    document.getElementById('mode1Screen').style.display = mode === 'mode1' ? '' : 'none';
+    document.getElementById('mode2Screen').style.display = mode === 'mode2' ? '' : 'none';
+
+    if (mode === 'mode1') {
+      userCoins = { h: 0, t: 0, o: 0 };
+      document.getElementById('m1ProblemNum').textContent = targetNum;
+      document.getElementById('m1Result').textContent = '';
+      document.getElementById('m1Result').className = 'result';
+      document.getElementById('m1NumberLine').classList.remove('visible');
+      renderMode1();
+    }
   }
+
+  // mode1: +/- ボタン
+  document.querySelectorAll('#mode1Screen .coinCtrlBtn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const place = btn.dataset.place;
+      const delta = parseInt(btn.dataset.delta, 10);
+      const next = userCoins[place] + delta;
+      if (next < 0 || next > 9) return;
+      userCoins[place] = next;
+      playTap();
+      renderMode1();
+    });
+  });
+
+  updateSoundBtn();
 </script>
 </body>
 </html>
