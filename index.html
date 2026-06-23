@@ -75,6 +75,7 @@
   .modeBtn:active { transform:scale(.97); }
   .modeBtn.m1 { background:#e65100; }
   .modeBtn.m2 { background:#1565c0; }
+  .modeBtn.m3 { background:#2e7d32; }
   .modeBtn .sub { font-size:0.7rem; font-weight:700; opacity:.8; display:block; margin-top:2px; }
 
   /* ===== ゲーム画面 ===== */
@@ -90,7 +91,7 @@
   }
   table.place td { padding:4px 3px; vertical-align:middle; text-align:center; background:#fafafa; }
 
-  /* 問題数字（mode1） */
+  /* 問題数字（mode1/mode3） */
   .problemNum {
     text-align:center; margin:4px 0 12px;
     font-size:3.6rem; font-weight:950; letter-spacing:.06em; color:var(--dark);
@@ -206,6 +207,36 @@
   }
   .backBtn:active { opacity:.6; }
 
+  /* ===== mode3 タイマー ===== */
+  .m3TimerWrap { text-align:center; margin-bottom:2px; }
+  .m3TimerNum {
+    font-size:2.6rem; font-weight:950; color:#2e7d32; letter-spacing:.04em;
+    transition: color .2s;
+  }
+  .m3TimerNum.urgent { color:#e0453a; }
+  .m3TimerLabel { font-size:0.8rem; color:#888; font-weight:700; margin-left:2px; }
+
+  /* ===== mode3 リザルト ===== */
+  .m3ResultWrap {
+    display:flex; flex-direction:column; align-items:center;
+    padding:28px 16px 36px; gap:14px; text-align:center;
+  }
+  .m3ScoreNum { font-size:5.5rem; font-weight:950; color:#2e7d32; line-height:1; }
+  .m3ScoreLabel { font-size:1.15rem; font-weight:700; color:#555; margin-top:-4px; }
+  .m3BestNew {
+    font-size:1.05rem; font-weight:900; color:#e8a000;
+    background:#fff8e1; border-radius:12px; padding:8px 20px;
+  }
+  .m3BestScore { font-size:0.85rem; color:#888; font-weight:700; }
+  .m3RetryBtn {
+    border:0; border-radius:16px; font-weight:950; cursor:pointer;
+    padding:18px 40px; font-size:18px;
+    color:#fff; background:#2e7d32; box-shadow:0 4px 12px rgba(0,0,0,.15);
+    transition:transform .1s;
+    margin-top:4px;
+  }
+  .m3RetryBtn:active { transform:scale(.97); }
+
   @media (max-width: 480px) {
     .wrap { padding:6px; }
     .panel { padding:10px 8px 16px; }
@@ -215,6 +246,8 @@
     .doneBtn { font-size:19px; padding:14px; }
     .spinDigit { font-size:2rem; }
     .coinAddBtn img { width: 44px; height: 44px; }
+    .m3ScoreNum { font-size:4.5rem; }
+    .m3TimerNum { font-size:2.2rem; }
   }
 </style>
 </head>
@@ -245,6 +278,10 @@
           </li>
           <li>
             <span class="howto-num">③</span>
+            <span><strong>れんぞく</strong>：30びょうで何もんせいかいできるかな？コインはそのまま残るよ</span>
+          </li>
+          <li>
+            <span class="howto-num">④</span>
             <span>できたら「<strong>できた！</strong>」を押そう</span>
           </li>
         </ul>
@@ -257,6 +294,10 @@
         <button class="modeBtn m2" id="startMode2" type="button">
           おかね → すうじ
           <span class="sub">コインを数えて数字を合わせる</span>
+        </button>
+        <button class="modeBtn m3" id="startMode3" type="button">
+          れんぞく（30びょう）
+          <span class="sub">コインを足したり引いたりしながらチャレンジ</span>
         </button>
       </div>
     </div>
@@ -364,6 +405,64 @@
           <div class="nlValue" id="m2NlValue"></div>
         </div>
       </div>
+
+      <!-- mode3: れんぞく30びょう -->
+      <div id="mode3Screen" style="display:none">
+        <div class="m3TimerWrap">
+          <span class="m3TimerNum" id="m3TimerDisplay">30</span>
+          <span class="m3TimerLabel">びょう</span>
+        </div>
+        <div class="problemNum" id="m3ProblemNum">438</div>
+        <table class="place">
+          <thead>
+            <tr>
+              <th>百のくらい</th>
+              <th>十のくらい</th>
+              <th>一のくらい</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><div class="coinArea" id="m3CoinsH"></div></td>
+              <td><div class="coinArea" id="m3CoinsT"></div></td>
+              <td><div class="coinArea" id="m3CoinsO"></div></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="actionRow">
+          <button class="coinAddBtn m3coin" data-place="h" type="button">
+            <img src="imgs/money_100.png" alt="100円">
+          </button>
+          <button class="coinAddBtn m3coin" data-place="t" type="button">
+            <img src="imgs/money_10.png" alt="10円">
+          </button>
+          <button class="coinAddBtn m3coin" data-place="o" type="button">
+            <img src="imgs/money_1.png" alt="1円">
+          </button>
+          <button class="doneBtn" id="m3DoneBtn" type="button">できた！</button>
+        </div>
+        <div class="numberLine" id="m3NumberLine">
+          <div class="nlTrack">
+            <div class="nlSeg nlSegH" id="m3NlBarH"></div>
+            <div class="nlSeg nlSegT" id="m3NlBarT"></div>
+            <div class="nlSeg nlSegO" id="m3NlBarO"></div>
+          </div>
+          <div class="nlLabels"><span>0</span><span>500</span><span>1000</span></div>
+          <div class="nlValue" id="m3NlValue"></div>
+        </div>
+      </div>
+
+      <!-- mode3: リザルト画面 -->
+      <div id="m3ResultScreen" style="display:none">
+        <div class="m3ResultWrap">
+          <div class="m3ScoreNum" id="m3ScoreNum">0</div>
+          <div class="m3ScoreLabel">もん せいかい！</div>
+          <div class="m3BestNew" id="m3BestNew" style="display:none">🎉 ベストスコア更新！</div>
+          <div class="m3BestScore" id="m3BestScore"></div>
+          <button class="m3RetryBtn" id="m3RetryBtn" type="button">もういちど</button>
+        </div>
+      </div>
+
     </div>
 
   </div>
@@ -410,7 +509,6 @@
     osc.start(now); osc.stop(now + dur + 0.02);
   }
 
-  // コイン追加音（切れ味のあるメタリックチック）
   function playCoinTick() {
     if (!soundOn) return;
     const ctx = getCtx(); if (!ctx) return;
@@ -428,7 +526,6 @@
     });
   }
 
-  // コイン削除音（高→低の下降スイープ）
   function playDeleteCoin() {
     if (!soundOn) return;
     const ctx = getCtx(); if (!ctx) return;
@@ -515,9 +612,13 @@
     document.getElementById('gameScreen').classList.add('active');
   }
 
-  document.getElementById('backBtn').addEventListener('click', showStart);
+  document.getElementById('backBtn').addEventListener('click', () => {
+    if (m3Timer) { clearInterval(m3Timer); m3Timer = null; }
+    showStart();
+  });
   document.getElementById('startMode1').addEventListener('click', () => startGame('mode1'));
   document.getElementById('startMode2').addEventListener('click', () => startGame('mode2'));
+  document.getElementById('startMode3').addEventListener('click', () => startGame('mode3'));
 
   // ===== 共通状態 =====
   let currentMode = null;
@@ -525,13 +626,17 @@
   let userCoins   = { h: 0, t: 0, o: 0 };
   let userDigits  = { h: 0, t: 0, o: 0 };
 
+  // ===== mode3専用状態 =====
+  let m3Timer    = null;
+  let m3TimeLeft = 30;
+  let m3Score    = 0;
+
   const COIN_SRC = {
     h: 'imgs/money_100.png',
     t: 'imgs/money_10.png',
     o: 'imgs/money_1.png',
   };
 
-  // onRemove を渡すとコインがタップ可能になる（mode1専用）
   function renderCoinArea(el, coinSrc, count, onRemove) {
     el.innerHTML = '';
     if (count === 0) {
@@ -573,6 +678,19 @@
     renderCoinArea(document.getElementById('m1CoinsO'), COIN_SRC.o, userCoins.o, makeRemover('o'));
   }
 
+  function renderMode3() {
+    const makeRemover = (place) => () => {
+      if (userCoins[place] <= 0) return;
+      userCoins[place]--;
+      playDeleteCoin();
+      renderMode3();
+      updateLiveBar('mode3');
+    };
+    renderCoinArea(document.getElementById('m3CoinsH'), COIN_SRC.h, userCoins.h, makeRemover('h'));
+    renderCoinArea(document.getElementById('m3CoinsT'), COIN_SRC.t, userCoins.t, makeRemover('t'));
+    renderCoinArea(document.getElementById('m3CoinsO'), COIN_SRC.o, userCoins.o, makeRemover('o'));
+  }
+
   function startGame(mode) {
     showGame();
     currentMode = mode;
@@ -580,6 +698,8 @@
 
     document.getElementById('mode1Screen').style.display = mode === 'mode1' ? '' : 'none';
     document.getElementById('mode2Screen').style.display = mode === 'mode2' ? '' : 'none';
+    document.getElementById('mode3Screen').style.display = mode === 'mode3' ? '' : 'none';
+    document.getElementById('m3ResultScreen').style.display = 'none';
 
     if (mode === 'mode1') {
       userCoins = { h: 0, t: 0, o: 0 };
@@ -596,9 +716,52 @@
       resetBar('m2');
       renderMode2();
     }
+    if (mode === 'mode3') {
+      if (m3Timer) { clearInterval(m3Timer); m3Timer = null; }
+      m3Score = 0;
+      m3TimeLeft = 30;
+      userCoins = { h: 0, t: 0, o: 0 };
+      document.getElementById('m3ProblemNum').textContent = targetNum;
+      const timerEl = document.getElementById('m3TimerDisplay');
+      timerEl.textContent = '30';
+      timerEl.classList.remove('urgent');
+      resetBar('m3');
+      renderMode3();
+      startM3Timer();
+    }
   }
 
-  // コインボタン（コイン追加）
+  // ===== mode3 タイマー =====
+  function startM3Timer() {
+    m3Timer = setInterval(() => {
+      m3TimeLeft--;
+      const el = document.getElementById('m3TimerDisplay');
+      el.textContent = m3TimeLeft;
+      el.classList.toggle('urgent', m3TimeLeft <= 5);
+      if (m3TimeLeft <= 0) {
+        clearInterval(m3Timer);
+        m3Timer = null;
+        showM3Result();
+      }
+    }, 1000);
+  }
+
+  function showM3Result() {
+    document.getElementById('mode3Screen').style.display = 'none';
+    document.getElementById('m3ResultScreen').style.display = '';
+    document.getElementById('m3ScoreNum').textContent = m3Score;
+
+    const prev = parseInt(localStorage.getItem('okaneToSuujiM3Best') || '0', 10);
+    const isNew = m3Score > 0 && m3Score > prev;
+    if (isNew) {
+      localStorage.setItem('okaneToSuujiM3Best', m3Score);
+    }
+    const best = isNew ? m3Score : prev;
+    document.getElementById('m3BestNew').style.display = isNew ? '' : 'none';
+    document.getElementById('m3BestScore').textContent = 'ベスト：' + best + 'もん';
+  }
+
+  // mode1コインボタン
   document.querySelectorAll('#mode1Screen .coinAddBtn').forEach(btn => {
     btn.addEventListener('click', () => {
       const place = btn.dataset.place;
@@ -607,6 +770,18 @@
       playCoinTick();
       renderMode1();
       updateLiveBar('mode1');
+    });
+  });
+
+  // mode3コインボタン
+  document.querySelectorAll('.m3coin').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const place = btn.dataset.place;
+      if (userCoins[place] >= 9) return;
+      userCoins[place]++;
+      playCoinTick();
+      renderMode3();
+      updateLiveBar('mode3');
     });
   });
 
@@ -661,20 +836,17 @@
 
     if (coinImgs.length === 0) { onDone(); return; }
 
-    // Read phase: BCRをまとめて先に全取得
     const track = document.querySelector('#' + prefix + 'NumberLine .nlTrack');
     const trackRect = track.getBoundingClientRect();
     const destX = trackRect.left + 24;
     const destY = trackRect.top + trackRect.height / 2;
     const rects = coinImgs.map(img => img.getBoundingClientRect());
 
-    // Write phase
     ['H', 'T', 'O'].forEach(p => {
       const area = document.getElementById(prefix + 'Coins' + p);
       if (area) area.style.opacity = '0';
     });
 
-    // クローンを全部作成してbodyに追加
     const clones = rects.map((r, i) => {
       const cx = r.left + r.width / 2;
       const cy = r.top + r.height / 2;
@@ -685,7 +857,6 @@
       return { clone, cx, cy };
     });
 
-    // 全クローンを1回のrAFで一括アニメーション開始（transition-delayでずらす）
     requestAnimationFrame(() => {
       clones.forEach(({ clone, cx, cy }, i) => {
         const delay = i * STAGGER;
@@ -748,16 +919,39 @@
       const resultEl = document.getElementById('m1Result');
       if (correct) onCorrect(resultEl);
       else onWrong(resultEl);
-    } else {
+    } else if (mode === 'mode2') {
       const correct = checkAnswer(userDigits, targetNum);
       const resultEl = document.getElementById('m2Result');
       if (correct) onCorrect(resultEl);
       else onWrong(resultEl);
+    } else {
+      // mode3: コインはそのまま残し、正解数を加算して次の問題へ
+      const correct = checkAnswer(userCoins, targetNum);
+      if (correct) {
+        m3Score++;
+        launchStars();
+        playVictory();
+        targetNum = generateProblem(targetNum);
+        document.getElementById('m3ProblemNum').textContent = targetNum;
+        updateLiveBar('mode3');
+      } else {
+        playWrong();
+        const panel = document.getElementById('m3ProblemNum').closest('.panel');
+        if (panel) {
+          panel.classList.remove('shaking');
+          requestAnimationFrame(() => {
+            panel.classList.add('shaking');
+            panel.addEventListener('animationend', () => panel.classList.remove('shaking'), { once: true });
+          });
+        }
+      }
     }
   }
 
   document.getElementById('m1DoneBtn').addEventListener('click', () => handleDone('mode1'));
   document.getElementById('m2DoneBtn').addEventListener('click', () => handleDone('mode2'));
+  document.getElementById('m3DoneBtn').addEventListener('click', () => handleDone('mode3'));
+  document.getElementById('m3RetryBtn').addEventListener('click', () => startGame('mode3'));
 
   // ===== ライブ数直線 =====
 
@@ -777,8 +971,8 @@
   }
 
   function updateLiveBar(mode) {
-    const coins = mode === 'mode1' ? userCoins : userDigits;
-    const prefix = mode === 'mode1' ? 'm1' : 'm2';
+    const coins = (mode === 'mode1' || mode === 'mode3') ? userCoins : userDigits;
+    const prefix = mode === 'mode1' ? 'm1' : mode === 'mode2' ? 'm2' : 'm3';
     document.getElementById(prefix + 'NlBarH').style.width = (coins.h * 10).toFixed(1) + '%';
     document.getElementById(prefix + 'NlBarT').style.width = (coins.t * 1).toFixed(1) + '%';
     document.getElementById(prefix + 'NlBarO').style.width = (coins.o * 0.1).toFixed(1) + '%';
@@ -801,7 +995,7 @@
         const a = document.getElementById('m1Coins' + p);
         if (a) a.style.opacity = '';
       });
-    } else {
+    } else if (currentMode === 'mode2') {
       userDigits = { h: 0, t: 0, o: 0 };
       document.getElementById('m2Result').textContent = '';
       document.getElementById('m2Result').className = 'result';
