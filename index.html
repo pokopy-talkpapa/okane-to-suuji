@@ -15,13 +15,16 @@
     --ng: #e0453a;
   }
   * { box-sizing: border-box; touch-action: manipulation; }
+  html { height: 100%; }
   body {
     margin: 0;
     font-family: system-ui, -apple-system, "Noto Sans JP", sans-serif;
     background: var(--bg);
     color: var(--dark);
+    height: 100%;
+    overflow: hidden;
   }
-  .wrap { max-width: 520px; margin: 0 auto; padding: 12px; }
+  .wrap { max-width: 520px; margin: 0 auto; padding: 12px; height: 100%; overflow-y: auto; }
   .panel {
     background: var(--panel);
     border-radius: var(--radius);
@@ -636,8 +639,8 @@
   }
 
   function animateCoinAbsorption(prefix, onDone) {
-    const DUR = 300;
-    const STAGGER = 30;
+    const DUR = 320;
+    const STAGGER = 40;
 
     const coinImgs = [];
     ['H', 'T', 'O'].forEach(p => {
@@ -647,24 +650,55 @@
 
     if (coinImgs.length === 0) { onDone(); return; }
 
-    // position:fixed クローンを使わず元のimgをその場でアニメーション
-    // （fixed+transformはモバイルでビューポートが縮むため廃止）
-    const total = coinImgs.length;
-    coinImgs.forEach((img, i) => {
+    // Read phase: BCRをまとめて先に全取得
+    const track = document.querySelector('#' + prefix + 'NumberLine .nlTrack');
+    const trackRect = track.getBoundingClientRect();
+    const destX = trackRect.left + 24;
+    const destY = trackRect.top + trackRect.height / 2;
+    const rects = coinImgs.map(img => img.getBoundingClientRect());
+
+    // Write phase
+    ['H', 'T', 'O'].forEach(p => {
+      const area = document.getElementById(prefix + 'Coins' + p);
+      if (area) area.style.opacity = '0';
+    });
+
+    // クローンを全部作成してbodyに追加
+    const clones = rects.map((r, i) => {
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const clone = document.createElement('img');
+      clone.src = coinImgs[i].src;
+      clone.style.cssText = `position:fixed;left:${cx}px;top:${cy}px;width:${r.width}px;height:${r.height}px;margin-left:${-r.width/2}px;margin-top:${-r.height/2}px;z-index:200;pointer-events:none;will-change:transform,opacity;transform:translate(0,0) scale(1);`;
+      document.body.appendChild(clone);
+      return { clone, cx, cy };
+    });
+
+    // 全クローンを1回のrAFで一括アニメーション開始（transition-delayでずらす）
+    requestAnimationFrame(() => {
+      clones.forEach(({ clone, cx, cy }, i) => {
+        const delay = i * STAGGER;
+        clone.style.transition = `transform ${DUR}ms ease-in ${delay}ms, opacity ${Math.round(DUR*0.35)}ms ease ${Math.round(DUR*0.65) + delay}ms`;
+        clone.style.transform = `translate(${destX - cx}px,${destY - cy}px) scale(0.15)`;
+        clone.style.opacity = '0';
+      });
+    });
+
+    let doneCount = 0;
+    const total = clones.length;
+    clones.forEach(({ clone }, i) => {
       setTimeout(() => {
-        img.style.transition = `transform ${DUR}ms ease-in, opacity ${Math.round(DUR*0.4)}ms ease ${Math.round(DUR*0.6)}ms`;
-        img.style.transform = 'scale(0.05)';
-        img.style.opacity = '0';
-      }, i * STAGGER);
+        clone.remove();
+        doneCount++;
+        if (doneCount === total) onDone();
+      }, i * STAGGER + DUR + 140);
     });
 
     setTimeout(() => {
       ['H','T','O'].forEach(p => {
         document.getElementById(prefix + 'NlBar' + p).style.background = '#4a9eff';
       });
-    }, Math.round(DUR * 0.6));
-
-    setTimeout(onDone, (total - 1) * STAGGER + DUR + 60);
+    }, Math.round(DUR * 0.65));
   }
 
   function onCorrect(resultEl) {
