@@ -494,6 +494,63 @@
   });
 
   updateSoundBtn();
+
+  // ===== Task 5: 正誤判定 + サウンド + 星エフェクト =====
+
+  // Step 1: 星エフェクト関数
+  function launchStars() {
+    const dirs = [[-90,-80],[90,-80],[0,-100],[-120,-40],[120,-40],[-60,-110],[60,-110],[0,-120]];
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.35;
+    dirs.forEach(([dx, dy], i) => {
+      const s = document.createElement('div');
+      s.className = 'star';
+      s.textContent = ['★','✨','⭐'][i % 3];
+      s.style.left = cx + 'px'; s.style.top = cy + 'px';
+      s.style.setProperty('--dx', dx + 'px');
+      s.style.setProperty('--dy', dy + 'px');
+      s.style.animationDelay = (i * 0.04) + 's';
+      document.body.appendChild(s);
+      setTimeout(() => s.remove(), 900);
+    });
+  }
+
+  // Step 2: 正誤判定と結果表示
+  function onCorrect(resultEl, numberLineId, barId, valueId) {
+    resultEl.textContent = '○ せいかい！';
+    resultEl.className = 'result victory';
+    playVictory();
+    launchStars();
+    // 数直線アニメ（Task 6 で実装。今は呼ぶだけ）
+    showNumberLine(numberLineId, barId, valueId, targetNum);
+  }
+
+  function onWrong(resultEl) {
+    resultEl.textContent = '× もういちど';
+    resultEl.className = 'result ng';
+    playWrong();
+  }
+
+  function handleDone(mode) {
+    if (mode === 'mode1') {
+      const correct = checkAnswer(userCoins, targetNum);
+      const resultEl = document.getElementById('m1Result');
+      if (correct) onCorrect(resultEl, 'm1NumberLine', 'm1NlBar', 'm1NlValue');
+      else onWrong(resultEl);
+    } else {
+      const correct = checkAnswer(userDigits, targetNum);
+      const resultEl = document.getElementById('m2Result');
+      if (correct) onCorrect(resultEl, 'm2NumberLine', 'm2NlBar', 'm2NlValue');
+      else onWrong(resultEl);
+    }
+  }
+
+  document.getElementById('m1DoneBtn').addEventListener('click', () => handleDone('mode1'));
+  document.getElementById('m2DoneBtn').addEventListener('click', () => handleDone('mode2'));
+
+  // showNumberLine は Task 6 で実装。スタブを置く
+  function showNumberLine(nlId, barId, valueId, value) {
+    // Task 6 で実装
+  }
 </script>
 </body>
 </html>
