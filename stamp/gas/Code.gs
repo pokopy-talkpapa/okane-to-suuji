@@ -16,6 +16,64 @@
  *   ?action=stamp&key=管理キー&member=ID&date=YYYY-MM-DD&op=toggle|on|off
  */
 
+/**
+ * 初期セットアップ（最初に1回だけ Apps Script エディタから実行する）。
+ * members / stamps / config の3シートを自動で作り、ヘッダー・サンプル・
+ * 管理キー（自動生成）・期間の初期値をセットします。
+ * すでにデータがあるシートは上書きしません（何度実行しても安全）。
+ * 実行後、実行ログ（表示 → ログ）に管理キーが出ます。
+ */
+function setup() {
+  var book = SpreadsheetApp.getActiveSpreadsheet();
+
+  // --- members ---
+  var members = book.getSheetByName('members') || book.insertSheet('members');
+  if (members.getLastRow() === 0) {
+    members.getRange(1, 1, 1, 3).setValues([['id', 'なまえ', 'あいことば']]);
+    members.getRange(2, 1, 2, 3).setValues([
+      ['1', 'さんぷる1', 'りんご3'],
+      ['2', 'さんぷる2', 'そらの5'],
+    ]);
+    members.setFrozenRows(1);
+  }
+
+  // --- stamps ---
+  var stamps = book.getSheetByName('stamps') || book.insertSheet('stamps');
+  if (stamps.getLastRow() === 0) {
+    stamps.getRange(1, 1, 1, 2).setValues([['日付', 'member_id']]);
+    stamps.setFrozenRows(1);
+  }
+
+  // --- config ---
+  var config = book.getSheetByName('config') || book.insertSheet('config');
+  if (config.getLastRow() === 0) {
+    var tz = Session.getScriptTimeZone() || 'Asia/Tokyo';
+    var today = new Date();
+    var end = new Date(today.getTime() + 41 * 86400000); // 42日間（両端含む）
+    var fmt = function (d) { return Utilities.formatDate(d, tz, 'yyyy-MM-dd'); };
+    var key = 'key-' + Utilities.getUuid(); // 推測されにくい管理キーを自動生成
+    config.getRange(1, 1, 5, 2).setValues([
+      ['key', 'value'],
+      ['開始日', fmt(today)],
+      ['終了日', fmt(end)],
+      ['管理キー', key],
+      ['タイトル', 'あさかつ スタンプカード'],
+    ]);
+    config.setFrozenRows(1);
+  }
+
+  // デフォルトの「シート1」が残っていて空なら消す
+  var first = book.getSheetByName('シート1') || book.getSheetByName('Sheet1');
+  if (first && book.getSheets().length > 1 && first.getLastRow() === 0) {
+    book.deleteSheet(first);
+  }
+
+  var cfg = readConfig();
+  Logger.log('セットアップ完了。管理キー = ' + cfg.key);
+  Logger.log('期間 = ' + cfg.start + ' 〜 ' + cfg.end);
+  return cfg.key;
+}
+
 function doGet(e) {
   var action = (e && e.parameter && e.parameter.action) || '';
   try {
