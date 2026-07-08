@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>スタンプ かんり</title>
+<style>
+  :root {
+    --bg: #f7f7f7; --panel: #ffffff;
+    --shadow: 0 8px 20px rgba(0,0,0,.10); --radius: 16px;
+    --dark: #111; --ok: #0f8a2b; --ng: #e0453a; --accent: #1565c0;
+  }
+  * { box-sizing: border-box; touch-action: manipulation; }
+  html { height: 100%; }
+  body {
+    margin: 0; font-family: system-ui, -apple-system, "Noto Sans JP", sans-serif;
+    background: var(--bg); color: var(--dark); min-height: 100%;
+  }
+  .wrap { max-width: 520px; margin: 0 auto; padding: 12px; }
+  .panel { background: var(--panel); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px 12px 20px; }
+  .title { font-weight:950; font-size:20px; margin:0 0 14px; text-align:center; }
+
+  /* 管理キー入力 */
+  .keyScreen { display:flex; flex-direction:column; align-items:center; gap:14px; padding:16px 8px 26px; }
+  .keyMsg { margin:0; color:#555; font-weight:700; }
+  .keyInput { width:100%; max-width:320px; font-size:1.1rem; padding:12px 14px; border:2px solid #ddd; border-radius:12px; outline:none; }
+  .keyInput:focus { border-color:var(--accent); }
+  .bigBtn { border:0; border-radius:14px; font-weight:950; cursor:pointer; padding:14px 26px; font-size:17px; color:#fff; background:var(--accent); box-shadow:0 4px 12px rgba(0,0,0,.15); transition:transform .1s; }
+  .bigBtn:active { transform:scale(.97); }
+  .err { color:var(--ng); font-weight:800; min-height:1.3em; margin:0; text-align:center; }
+
+  /* 管理画面 */
+  .adminScreen { display:none; }
+  .adminScreen.active { display:block; }
+
+  .dateBar { display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:6px; }
+  .dateBtn { border:0; background:#eee; border-radius:12px; width:44px; height:40px; font-size:1.2rem; font-weight:900; cursor:pointer; }
+  .dateBtn:active { background:#ddd; }
+  .dateLabel { font-size:1.15rem; font-weight:950; min-width:150px; text-align:center; }
+  .dateLabel .todayTag { display:inline-block; font-size:.7rem; font-weight:900; color:#fff; background:var(--accent); border-radius:999px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
+  .todayBtn { display:block; margin:0 auto 8px; border:0; background:transparent; color:var(--accent); font-weight:800; font-size:.85rem; cursor:pointer; text-decoration:underline; }
+
+  .countBar { text-align:center; font-weight:900; color:#555; margin:0 0 12px; }
+  .countBar b { color:var(--ok); font-size:1.15rem; }
+
+  .roster { display:flex; flex-direction:column; gap:8px; }
+  .kid {
+    display:flex; align-items:center; gap:12px;
+    border:2px solid #eee; border-radius:14px; background:#fafafa;
+    padding:12px 14px; cursor:pointer; user-select:none;
+    transition:background .1s, border-color .1s, transform .06s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .kid:active { transform:scale(.985); }
+  .kid.on { background:#f2faf3; border-color:#bfe3c4; }
+  .kid.busy { opacity:.55; }
+  .check {
+    flex-shrink:0; width:34px; height:34px; border-radius:50%;
+    border:2.5px solid #d5d5d5; color:transparent;
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.2rem; font-weight:900;
+  }
+  .kid.on .check { background:var(--ok); border-color:var(--ok); color:#fff; }
+  .kid .kidName { font-size:1.15rem; font-weight:900; }
+  .kid.on .kidName { color:var(--ok); }
+
+  .loading, .adminErr { text-align:center; color:#999; font-weight:800; padding:24px 10px; }
+  .adminErr { color:var(--ng); }
+  .footRow { display:flex; justify-content:center; margin-top:16px; }
+  .textBtn { border:0; background:transparent; color:#aaa; font-size:.85rem; font-weight:800; cursor:pointer; text-decoration:underline; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="panel">
+    <h1 class="title">スタンプ かんり</h1>
+
+    <!-- 管理キー入力 -->
+    <div class="keyScreen" id="keyScreen">
+      <p class="keyMsg">管理キーを いれてください</p>
+      <input class="keyInput" id="keyInput" type="password" autocomplete="off" placeholder="管理キー">
+      <p class="err" id="keyErr"></p>
+      <button class="bigBtn" id="keyBtn" type="button">ひらく</button>
+    </div>
+
+    <!-- 管理画面 -->
+    <div class="adminScreen" id="adminScreen">
+      <div class="dateBar">
+        <button class="dateBtn" id="prevDay" type="button" aria-label="まえの日">‹</button>
+        <div class="dateLabel" id="dateLabel"></div>
+        <button class="dateBtn" id="nextDay" type="button" aria-label="つぎの日">›</button>
+      </div>
+      <button class="todayBtn" id="todayBtn" type="button">きょうに もどる</button>
+      <p class="countBar" id="countBar"></p>
+
+      <div class="loading" id="adminLoading" style="display:none;">よみこみちゅう…</div>
+      <div class="adminErr" id="adminErrBox" style="display:none;"></div>
+      <div class="roster" id="roster"></div>
+
+      <div class="footRow"><button class="textBtn" id="logoutBtn" type="button">キーを わすれる</button></div>
+    </div>
+  </div>
+</div>
+
+<script src="stamp-logic.js"></script>
+<script>
+  // ↓ デプロイした GAS ウェブアプリの URL に書きかえてください（SETUP.md 参照）。
+  var GAS_URL = 'ここにGASのURLをはりつける';
+  var params = new URLSearchParams(location.search);
+  var DEMO = params.get('demo') === '1' || GAS_URL.indexOf('http') !== 0;
+
+  var adminKey = localStorage.getItem('okaneToSuujiStampAdminKey') || '';
+  var curDate = STAMP.dateKey(new Date());
+
+  // ====== デモ用の仮データ ======
+  var demoMembers = [
+    { id: 'a', name: 'はると', pass: 'はると' },
+    { id: 'b', name: 'ゆい', pass: 'ゆい' },
+    { id: 'c', name: 'そうた', pass: 'そうた' },
+    { id: 'd', name: 'めい', pass: 'めい' },
+    { id: 'e', name: 'りく', pass: 'りく' },
+  ];
+  var demoStamps = {}; // key: date + '|' + id
+
+  function api(query) {
+    if (DEMO) return demoApi(query);
+    var url = GAS_URL + '?' + query;
+    return fetch(url).then(function (r) { return r.json(); });
+  }
+  function demoApi(query) {
+    var q = new URLSearchParams(query);
+    var action = q.get('action');
+    if (action === 'roster') {
+      var date = q.get('date');
+      return Promise.resolve({ ok: true, date: date, members: demoMembers.map(function (m) {
+        return { id: m.id, name: m.name, stamped: !!demoStamps[date + '|' + m.id] };
+      }) });
+    }
+    if (action === 'stamp') {
+      var d = q.get('date'), id = q.get('member'), op = q.get('op');
+      var k = d + '|' + id, cur = !!demoStamps[k];
+      var want = op === 'on' ? true : op === 'off' ? false : !cur;
+      if (want) demoStamps[k] = true; else delete demoStamps[k];
+      return Promise.resolve({ ok: true, stamped: want });
+    }
+    return Promise.resolve({ ok: false, error: 'unknown' });
+  }
+
+  // ====== 画面切替 ======
+  function showKeyScreen() {
+    document.getElementById('adminScreen').classList.remove('active');
+    document.getElementById('keyScreen').style.display = '';
+    document.getElementById('keyErr').textContent = '';
+    document.getElementById('keyInput').value = '';
+  }
+  function showAdmin() {
+    document.getElementById('keyScreen').style.display = 'none';
+    document.getElementById('adminScreen').classList.add('active');
+    loadRoster();
+  }
+
+  // ====== 日付表示 ======
+  function renderDateLabel() {
+    var p = STAMP.parseKey(curDate);
+    var wd = ['にち','げつ','か','すい','もく','きん','ど'];
+    var w = new Date(p.y, p.m - 1, p.d).getDay();
+    var isToday = curDate === STAMP.dateKey(new Date());
+    document.getElementById('dateLabel').innerHTML =
+      p.m + 'がつ ' + p.d + 'にち（' + wd[w] + '）' +
+      (isToday ? '<span class="todayTag">きょう</span>' : '');
+    document.getElementById('todayBtn').style.display = isToday ? 'none' : '';
+  }
+  function shiftDate(days) {
+    var p = STAMP.parseKey(curDate);
+    var d = new Date(p.y, p.m - 1, p.d);
+    d.setDate(d.getDate() + days);
+    curDate = STAMP.dateKey(d);
+    loadRoster();
+  }
+
+  // ====== 名簿の読み込み・描画 ======
+  function loadRoster() {
+    renderDateLabel();
+    document.getElementById('adminLoading').style.display = '';
+    document.getElementById('adminErrBox').style.display = 'none';
+    document.getElementById('roster').innerHTML = '';
+    document.getElementById('countBar').textContent = '';
+
+    api('action=roster&key=' + encodeURIComponent(adminKey) + '&date=' + curDate).then(function (data) {
+      document.getElementById('adminLoading').style.display = 'none';
+      if (!data || !data.ok) {
+        if (data && /管理キー/.test(data.error || '')) {
+          localStorage.removeItem('okaneToSuujiStampAdminKey');
+          showKeyScreen();
+          document.getElementById('keyErr').textContent = data.error;
+          return;
+        }
+        showAdminError((data && data.error) || 'よみこみに しっぱいしました');
+        return;
+      }
+      localStorage.setItem('okaneToSuujiStampAdminKey', adminKey);
+      renderRoster(data.members);
+    }).catch(function () {
+      document.getElementById('adminLoading').style.display = 'none';
+      showAdminError('つうしんに しっぱいしました');
+    });
+  }
+
+  function showAdminError(msg) {
+    var box = document.getElementById('adminErrBox');
+    box.style.display = ''; box.textContent = msg;
+  }
+
+  function renderRoster(members) {
+    var roster = document.getElementById('roster');
+    roster.innerHTML = '';
+    members.forEach(function (m) {
+      var row = document.createElement('div');
+      row.className = 'kid' + (m.stamped ? ' on' : '');
+      row.innerHTML = '<div class="check">✓</div><div class="kidName"></div>';
+      row.querySelector('.kidName').textContent = m.name;
+      row.addEventListener('click', function () { toggleStamp(row, m); });
+      roster.appendChild(row);
+    });
+    updateCount();
+  }
+
+  function updateCount() {
+    var on = document.querySelectorAll('#roster .kid.on').length;
+    var total = document.querySelectorAll('#roster .kid').length;
+    document.getElementById('countBar').innerHTML = 'きょう 来た子: <b>' + on + '</b> / ' + total + '人';
+  }
+
+  function toggleStamp(row, m) {
+    if (row.classList.contains('busy')) return;
+    var want = !row.classList.contains('on');
+    // 楽観的に見た目を先に更新
+    row.classList.toggle('on', want);
+    row.classList.add('busy');
+    updateCount();
+
+    var op = want ? 'on' : 'off';
+    api('action=stamp&key=' + encodeURIComponent(adminKey) + '&member=' + encodeURIComponent(m.id) +
+        '&date=' + curDate + '&op=' + op).then(function (data) {
+      row.classList.remove('busy');
+      if (!data || !data.ok) {
+        // 失敗したら元にもどす
+        row.classList.toggle('on', !want);
+        updateCount();
+        showAdminError((data && data.error) || 'ほぞんに しっぱいしました');
+      } else {
+        row.classList.toggle('on', !!data.stamped);
+        updateCount();
+      }
+    }).catch(function () {
+      row.classList.remove('busy');
+      row.classList.toggle('on', !want);
+      updateCount();
+      showAdminError('つうしんに しっぱいしました');
+    });
+  }
+
+  // ====== イベント ======
+  document.getElementById('keyBtn').addEventListener('click', function () {
+    var v = document.getElementById('keyInput').value.trim();
+    if (!v) { document.getElementById('keyErr').textContent = '管理キーを いれてください'; return; }
+    adminKey = v;
+    showAdmin();
+  });
+  document.getElementById('keyInput').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') document.getElementById('keyBtn').click();
+  });
+  document.getElementById('prevDay').addEventListener('click', function () { shiftDate(-1); });
+  document.getElementById('nextDay').addEventListener('click', function () { shiftDate(1); });
+  document.getElementById('todayBtn').addEventListener('click', function () {
+    curDate = STAMP.dateKey(new Date()); loadRoster();
+  });
+  document.getElementById('logoutBtn').addEventListener('click', function () {
+    localStorage.removeItem('okaneToSuujiStampAdminKey');
+    adminKey = ''; showKeyScreen();
+  });
+
+  // ====== 起動 ======
+  if (adminKey) showAdmin();
+  else showKeyScreen();
+</script>
+</body>
+</html>
